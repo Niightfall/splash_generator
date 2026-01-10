@@ -6,19 +6,24 @@ import 'package:image/image.dart' as img;
 import 'package:mason_logger/mason_logger.dart';
 
 class TransformImageCommand extends Command<int> {
-
   TransformImageCommand({required Logger logger}) : _logger = logger;
   final Logger _logger;
   @override
-  String get description => 'Transforms a png image into the dimensions needed for an android 12 flutter splash screen.';
+  String get description =>
+      'Transforms a png image into the dimensions needed for an android 12 flutter splash screen.';
 
   @override
   String get name => 'transform';
 
   @override
   Future<int> run() async {
-    final validImagePathRegex = RegExp(r'^(?:/|[a-zA-Z]:[\\/])(?:[\w\-\s.]+[\\/])*[\w\-\s.]+\.(png|jpg|jpeg|gif)$', caseSensitive: false);
-    _logger.info('Transforming image, please provide the full path to the image:');
+    final validImagePathRegex = RegExp(
+      r'^(?:/|[a-zA-Z]:[\\/])(?:[\w\-\s.]+[\\/])*[\w\-\s.]+\.(png|jpg|jpeg|gif)$',
+      caseSensitive: false,
+    );
+    _logger.info(
+      'Transforming image, please provide the full path to the image:',
+    );
     final input = stdin.readLineSync(encoding: utf8);
     _logger.info(input ?? 'No input provided');
     if (input == null) {
@@ -29,7 +34,7 @@ class TransformImageCommand extends Command<int> {
       return ExitCode.osFile.code;
     }
     final file = File(input);
-    if (! file.existsSync()) {
+    if (!file.existsSync()) {
       _logger.info('File does not exist: $input');
       return ExitCode.osFile.code;
     }
@@ -62,7 +67,6 @@ class TransformImageCommand extends Command<int> {
     // Fill with transparent pixels
     img.fill(bolstered, color: img.ColorUint8.rgba(0, 0, 0, 0));
 
-
     // Calculate top-left position to center the resized image
     const offset = (1152 - 768) ~/ 2;
 
@@ -73,10 +77,8 @@ class TransformImageCommand extends Command<int> {
       }
     }
 
-
     // Encode and save
     final outBytes = img.encodePng(bolstered);
     await file.writeAsBytes(outBytes);
   }
-
 }

@@ -14,7 +14,6 @@ void main() {
     late SplashGeneratorCommandRunner commandRunner;
 
     setUp(() {
-
       logger = _MockLogger();
 
       commandRunner = SplashGeneratorCommandRunner(

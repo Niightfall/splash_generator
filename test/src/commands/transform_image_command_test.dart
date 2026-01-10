@@ -32,7 +32,9 @@ void main() {
       expect(exitCode, ExitCode.ioError.code);
 
       verify(
-        () => logger.info('Transforming image, please provide the full path to the image:'),
+        () => logger.info(
+          'Transforming image, please provide the full path to the image:',
+        ),
       ).called(1);
       verify(() => stdin.readLineSync(encoding: utf8)).called(1);
       verify(() => logger.info('No input provided')).called(1);
@@ -49,7 +51,9 @@ void main() {
       expect(exitCode, ExitCode.osFile.code);
 
       verify(
-        () => logger.info('Transforming image, please provide the full path to the image:'),
+        () => logger.info(
+          'Transforming image, please provide the full path to the image:',
+        ),
       ).called(1);
       verify(() => stdin.readLineSync(encoding: utf8)).called(1);
       verify(() => logger.info('invalid format: $invalidInput')).called(1);
@@ -57,8 +61,9 @@ void main() {
 
     test('non-existent image path input', () async {
       const nonExistentPath = '/path/to/nonexistent/image.png';
-      when(() => stdin.readLineSync(encoding: utf8))
-          .thenReturn(nonExistentPath);
+      when(
+        () => stdin.readLineSync(encoding: utf8),
+      ).thenReturn(nonExistentPath);
       final exitCode = await IOOverrides.runZoned(
         () async => commandRunner.run(['transform']),
         stdin: () => stdin,
@@ -66,10 +71,15 @@ void main() {
 
       expect(exitCode, ExitCode.osFile.code);
 
-      verify(() => logger.info('Transforming image, please provide the full path to the image:')).called(1);
+      verify(
+        () => logger.info(
+          'Transforming image, please provide the full path to the image:',
+        ),
+      ).called(1);
       verify(() => stdin.readLineSync(encoding: utf8)).called(1);
-      verify(() => logger.info('File does not exist: $nonExistentPath'))
-          .called(1);
+      verify(
+        () => logger.info('File does not exist: $nonExistentPath'),
+      ).called(1);
     });
 
     test('throws decoding exception for invalid image file', () async {
@@ -82,59 +92,74 @@ void main() {
       when(() => stdin.readLineSync(encoding: utf8)).thenReturn(tempFile.path);
 
       final exitCode = await IOOverrides.runZoned(
-            () async => commandRunner.run(['transform']),
+        () async => commandRunner.run(['transform']),
         stdin: () => stdin,
       );
 
       expect(exitCode, ExitCode.software.code);
 
-      verify(() => logger.info('Transforming image, please provide the full path to the image:')).called(1);
+      verify(
+        () => logger.info(
+          'Transforming image, please provide the full path to the image:',
+        ),
+      ).called(1);
       verify(() => stdin.readLineSync(encoding: utf8)).called(1);
       verify(() => logger.info('File exists: ${tempFile.path}')).called(1);
-      verify(() => logger.err('Error transforming image: Exception: Could not decode image')).called(1);
+      verify(
+        () => logger.err(
+          'Error transforming image: Exception: Could not decode image',
+        ),
+      ).called(1);
 
       await tempDir.delete(recursive: true);
     });
 
+    test(
+      'successful image path input, open file and transform it to 768x768',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp();
+        final tempFile = File('${tempDir.path}/test.png');
 
-    test('successful image path input, open file and transform it to 768x768', () async {
-      final tempDir = await Directory.systemTemp.createTemp();
-      final tempFile = File('${tempDir.path}/test.png');
+        // Create a valid 1x1 PNG image
+        final testImage = img.Image(width: 1, height: 1);
+        final pngBytes = img.encodePng(testImage);
+        await tempFile.writeAsBytes(pngBytes);
 
-      // Create a valid 1x1 PNG image
-      final testImage = img.Image(width: 1, height: 1);
-      final pngBytes = img.encodePng(testImage);
-      await tempFile.writeAsBytes(pngBytes);
+        when(
+          () => stdin.readLineSync(encoding: utf8),
+        ).thenReturn(tempFile.path);
 
-      when(() => stdin.readLineSync(encoding: utf8)).thenReturn(tempFile.path);
+        final exitCode = await IOOverrides.runZoned(
+          () async => commandRunner.run(['transform']),
+          stdin: () => stdin,
+        );
 
-      final exitCode = await IOOverrides.runZoned(
-            () async => commandRunner.run(['transform']),
-        stdin: () => stdin,
-      );
+        expect(exitCode, ExitCode.success.code);
 
-      expect(exitCode, ExitCode.success.code);
+        verify(
+          () => logger.info(
+            'Transforming image, please provide the full path to the image:',
+          ),
+        ).called(1);
+        verify(() => stdin.readLineSync(encoding: utf8)).called(1);
+        verify(() => logger.info('File exists: ${tempFile.path}')).called(1);
 
-      verify(() => logger.info('Transforming image, please provide the full path to the image:')).called(1);
-      verify(() => stdin.readLineSync(encoding: utf8)).called(1);
-      verify(() => logger.info('File exists: ${tempFile.path}')).called(1);
+        // Check image size
+        final resultBytes = await tempFile.readAsBytes();
+        final image = img.decodeImage(resultBytes);
+        expect(image, isNotNull);
+        expect(image!.width, equals(1152));
+        expect(image.height, equals(1152));
 
-      // Check image size
-      final resultBytes = await tempFile.readAsBytes();
-      final image = img.decodeImage(resultBytes);
-      expect(image, isNotNull);
-      expect(image!.width, equals(1152));
-      expect(image.height, equals(1152));
+        // Check that the corners are transparent
+        expect(image.getPixel(0, 0).a, equals(0));
+        expect(image.getPixel(1151, 0).a, equals(0));
+        expect(image.getPixel(0, 1151).a, equals(0));
+        expect(image.getPixel(1151, 1151).a, equals(0));
 
-      // Check that the corners are transparent
-      expect(image.getPixel(0, 0).a, equals(0));
-      expect(image.getPixel(1151, 0).a, equals(0));
-      expect(image.getPixel(0, 1151).a, equals(0));
-      expect(image.getPixel(1151, 1151).a, equals(0));
-
-
-      await tempDir.delete(recursive: true);
-    });
+        await tempDir.delete(recursive: true);
+      },
+    );
 
     test('wrong usage', () async {
       final exitCode = await commandRunner.run(['transform', '-p']);

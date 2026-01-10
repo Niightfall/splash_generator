@@ -161,18 +161,48 @@ void main() {
       },
     );
 
+    test('image path via -p option skips prompt and transforms image', () async {
+      final tempDir = await Directory.systemTemp.createTemp();
+      final tempFile = File('${tempDir.path}/test.png');
+
+      // Create a valid 1x1 PNG image
+      final testImage = img.Image(width: 1, height: 1);
+      final pngBytes = img.encodePng(testImage);
+      await tempFile.writeAsBytes(pngBytes);
+
+      final exitCode = await commandRunner.run(['transform', '-p', tempFile.path]);
+
+      expect(exitCode, ExitCode.success.code);
+
+      // Should not prompt for stdin
+      verifyNever(() => logger.info('Transforming image, please provide the full path to the image:'));
+
+      verify(() => logger.info('File exists: ${tempFile.path}')).called(1);
+
+      // Check image size
+      final resultBytes = await tempFile.readAsBytes();
+      final image = img.decodeImage(resultBytes);
+      expect(image, isNotNull);
+      expect(image!.width, equals(1152));
+      expect(image.height, equals(1152));
+
+      await tempDir.delete(recursive: true);
+    });
+
+
     test('wrong usage', () async {
-      final exitCode = await commandRunner.run(['transform', '-p']);
+      final exitCode = await commandRunner.run(['transform', '-j']);
 
       expect(exitCode, ExitCode.usage.code);
 
       verify(
-        () => logger.err('Could not find an option or flag "-p".'),
+        () => logger.err('Could not find an option or flag "-j".'),
       ).called(1);
       verify(
         () => logger.info('''
 Usage: $executableName transform [arguments]
--h, --help    Print this usage information.
+-h, --help          Print this usage information.
+-p, --image-path    The path to the image file.
 
 Run "$executableName help" to see global options.'''),
       ).called(1);

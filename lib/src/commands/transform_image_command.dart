@@ -6,8 +6,15 @@ import 'package:image/image.dart' as img;
 import 'package:mason_logger/mason_logger.dart';
 
 class TransformImageCommand extends Command<int> {
-  TransformImageCommand({required Logger logger}) : _logger = logger;
+  TransformImageCommand({required Logger logger}) : _logger = logger {
+    argParser.addOption(
+      'image-path',
+      abbr: 'p',
+      help: 'The path to the image file.',
+    );
+  }
   final Logger _logger;
+
   @override
   String get description =>
       'Transforms a png image into the dimensions needed for an android 12 flutter splash screen.';
@@ -21,14 +28,21 @@ class TransformImageCommand extends Command<int> {
       r'^(?:/|[a-zA-Z]:[\\/])(?:[\w\-\s.]+[\\/])*[\w\-\s.]+\.(png|jpg|jpeg|gif)$',
       caseSensitive: false,
     );
-    _logger.info(
-      'Transforming image, please provide the full path to the image:',
-    );
-    final input = stdin.readLineSync(encoding: utf8);
-    _logger.info(input ?? 'No input provided');
+
+    // Use only the --image-path/-p option
+    var input = argResults!['image-path'] as String?;
+
     if (input == null) {
-      return ExitCode.ioError.code;
+      _logger.info(
+        'Transforming image, please provide the full path to the image:',
+      );
+      input = stdin.readLineSync(encoding: utf8);
+      _logger.info(input ?? 'No input provided');
+      if (input == null) {
+        return ExitCode.ioError.code;
+      }
     }
+
     if (!validImagePathRegex.hasMatch(input)) {
       _logger.info('invalid format: $input');
       return ExitCode.osFile.code;
@@ -48,6 +62,7 @@ class TransformImageCommand extends Command<int> {
     }
     return ExitCode.success.code;
   }
+
 
   Future<void> scaleImageTo768(String path) async {
     final file = File(path);

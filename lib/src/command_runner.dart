@@ -7,8 +7,7 @@ import 'package:splash_generator/src/version.dart';
 
 const executableName = 'splash_generator';
 const packageName = 'splash_generator';
-const description =
-    'A Very Good Project for generating splash screen images (Android 12+).';
+const description = 'A Very Good Project for generating splash screen images (Android 12+).';
 
 /// {@template splash_generator_command_runner}
 /// A [CommandRunner] for the CLI.
@@ -19,9 +18,7 @@ const description =
 /// {@endtemplate}
 class SplashGeneratorCommandRunner extends CompletionCommandRunner<int> {
   /// {@macro splash_generator_command_runner}
-  SplashGeneratorCommandRunner({Logger? logger})
-    : _logger = logger ?? Logger(),
-      super(executableName, description) {
+  SplashGeneratorCommandRunner({Logger? logger}) : _logger = logger ?? Logger(), super(executableName, description) {
     // Add root options and flags
     argParser
       ..addFlag(

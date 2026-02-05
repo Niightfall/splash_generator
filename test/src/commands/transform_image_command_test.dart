@@ -189,7 +189,6 @@ void main() {
       await tempDir.delete(recursive: true);
     });
 
-
     test('wrong usage', () async {
       final exitCode = await commandRunner.run(['transform', '-j']);
 

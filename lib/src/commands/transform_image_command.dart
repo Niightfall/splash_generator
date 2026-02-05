@@ -63,7 +63,6 @@ class TransformImageCommand extends Command<int> {
     return ExitCode.success.code;
   }
 
-
   Future<void> scaleImageTo768(String path) async {
     final file = File(path);
     final bytes = await file.readAsBytes();
@@ -73,8 +72,13 @@ class TransformImageCommand extends Command<int> {
     // Normalize orientation if needed
     final normalized = img.bakeOrientation(image);
 
-    // Resize to 768x768
-    final resized = img.copyResize(normalized, width: 768, height: 768);
+    // Resize so the larger dimension becomes 768, preserving aspect ratio
+    final img.Image resized;
+    if (normalized.width >= normalized.height) {
+      resized = img.copyResize(normalized, width: 768);
+    } else {
+      resized = img.copyResize(normalized, height: 768);
+    }
 
     // Create a new 1152x1152 transparent image
     final bolstered = img.Image(width: 1152, height: 1152, numChannels: 4);
@@ -83,12 +87,13 @@ class TransformImageCommand extends Command<int> {
     img.fill(bolstered, color: img.ColorUint8.rgba(0, 0, 0, 0));
 
     // Calculate top-left position to center the resized image
-    const offset = (1152 - 768) ~/ 2;
+    final offsetX = (1152 - resized.width) ~/ 2;
+    final offsetY = (1152 - resized.height) ~/ 2;
 
     // Manually copy pixels from resized to bolstered
     for (var y = 0; y < resized.height; y++) {
       for (var x = 0; x < resized.width; x++) {
-        bolstered.setPixel(x + offset, y + offset, resized.getPixel(x, y));
+        bolstered.setPixel(x + offsetX, y + offsetY, resized.getPixel(x, y));
       }
     }
 

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
-import 'package:image/image.dart' as img;
 import 'package:mason_logger/mason_logger.dart';
+import 'package:splash_generator/src/image/android_splash_image_transformer.dart';
 
 class TransformImageCommand extends Command<int> {
   TransformImageCommand({required Logger logger}) : _logger = logger {
@@ -17,7 +17,7 @@ class TransformImageCommand extends Command<int> {
 
   @override
   String get description =>
-      'Transforms a png image into the dimensions needed for an android 12 flutter splash screen.';
+      'Prepares an Android splash image raster for Flutter projects.';
 
   @override
   String get name => 'transform';
@@ -54,51 +54,17 @@ class TransformImageCommand extends Command<int> {
     }
     _logger.info('File exists: $input');
     try {
-      await scaleImageTo768(input);
+      final sourceBytes = await file.readAsBytes();
+      final transformedBytes = transformAndroidSplashImage(sourceBytes);
+      await file.writeAsBytes(transformedBytes);
       _logger.info('Image transformed successfully.');
+    } on FormatException catch (e) {
+      _logger.err('Error transforming image: Exception: ${e.message}');
+      return ExitCode.software.code;
     } on Exception catch (e) {
       _logger.err('Error transforming image: $e');
       return ExitCode.software.code;
     }
     return ExitCode.success.code;
-  }
-
-  Future<void> scaleImageTo768(String path) async {
-    final file = File(path);
-    final bytes = await file.readAsBytes();
-    final image = img.decodeImage(bytes);
-    if (image == null) throw Exception('Could not decode image');
-
-    // Normalize orientation if needed
-    final normalized = img.bakeOrientation(image);
-
-    // Resize so the larger dimension becomes 768, preserving aspect ratio
-    final img.Image resized;
-    if (normalized.width >= normalized.height) {
-      resized = img.copyResize(normalized, width: 768);
-    } else {
-      resized = img.copyResize(normalized, height: 768);
-    }
-
-    // Create a new 1152x1152 transparent image
-    final bolstered = img.Image(width: 1152, height: 1152, numChannels: 4);
-
-    // Fill with transparent pixels
-    img.fill(bolstered, color: img.ColorUint8.rgba(0, 0, 0, 0));
-
-    // Calculate top-left position to center the resized image
-    final offsetX = (1152 - resized.width) ~/ 2;
-    final offsetY = (1152 - resized.height) ~/ 2;
-
-    // Manually copy pixels from resized to bolstered
-    for (var y = 0; y < resized.height; y++) {
-      for (var x = 0; x < resized.width; x++) {
-        bolstered.setPixel(x + offsetX, y + offsetY, resized.getPixel(x, y));
-      }
-    }
-
-    // Encode and save
-    final outBytes = img.encodePng(bolstered);
-    await file.writeAsBytes(outBytes);
   }
 }

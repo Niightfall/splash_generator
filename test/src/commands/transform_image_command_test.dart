@@ -115,7 +115,7 @@ void main() {
     });
 
     test(
-      'successful image path input, open file and transform it to 768x768',
+      'successful image path input, open file and transform it to 1152x1152',
       () async {
         final tempDir = await Directory.systemTemp.createTemp();
         final tempFile = File('${tempDir.path}/test.png');
@@ -161,33 +161,44 @@ void main() {
       },
     );
 
-    test('image path via -p option skips prompt and transforms image', () async {
-      final tempDir = await Directory.systemTemp.createTemp();
-      final tempFile = File('${tempDir.path}/test.png');
+    test(
+      'image path via -p option skips prompt and transforms image',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp();
+        final tempFile = File('${tempDir.path}/test.png');
 
-      // Create a valid 1x1 PNG image
-      final testImage = img.Image(width: 1, height: 1);
-      final pngBytes = img.encodePng(testImage);
-      await tempFile.writeAsBytes(pngBytes);
+        // Create a valid 1x1 PNG image
+        final testImage = img.Image(width: 1, height: 1);
+        final pngBytes = img.encodePng(testImage);
+        await tempFile.writeAsBytes(pngBytes);
 
-      final exitCode = await commandRunner.run(['transform', '-p', tempFile.path]);
+        final exitCode = await commandRunner.run([
+          'transform',
+          '-p',
+          tempFile.path,
+        ]);
 
-      expect(exitCode, ExitCode.success.code);
+        expect(exitCode, ExitCode.success.code);
 
-      // Should not prompt for stdin
-      verifyNever(() => logger.info('Transforming image, please provide the full path to the image:'));
+        // Should not prompt for stdin
+        verifyNever(
+          () => logger.info(
+            'Transforming image, please provide the full path to the image:',
+          ),
+        );
 
-      verify(() => logger.info('File exists: ${tempFile.path}')).called(1);
+        verify(() => logger.info('File exists: ${tempFile.path}')).called(1);
 
-      // Check image size
-      final resultBytes = await tempFile.readAsBytes();
-      final image = img.decodeImage(resultBytes);
-      expect(image, isNotNull);
-      expect(image!.width, equals(1152));
-      expect(image.height, equals(1152));
+        // Check image size
+        final resultBytes = await tempFile.readAsBytes();
+        final image = img.decodeImage(resultBytes);
+        expect(image, isNotNull);
+        expect(image!.width, equals(1152));
+        expect(image.height, equals(1152));
 
-      await tempDir.delete(recursive: true);
-    });
+        await tempDir.delete(recursive: true);
+      },
+    );
 
     test('wrong usage', () async {
       final exitCode = await commandRunner.run(['transform', '-j']);
